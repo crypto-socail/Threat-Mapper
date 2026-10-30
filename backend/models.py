@@ -66,3 +66,15 @@ class WatchlistRecord(Base):
     added_at = Column(DateTime, default=datetime.utcnow)
     last_checked = Column(DateTime, nullable=True)
     alert_on_change = Column(Boolean, default=True)
+
+
+class AlertRecord(Base):
+    __tablename__ = "alert_records"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    org_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    ioc_value = Column(String(255), nullable=False)
+    ioc_type = Column(String(50), nullable=False)
+    threat_score = Column(Float, nullable=False)
+    message = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
