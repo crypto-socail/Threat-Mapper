@@ -27,6 +27,9 @@ from auth import (
     verify_tenant_access,
 )
 
+from fastapi.middleware.cors import CORSMiddleware
+
+
 # Build all tables in the database
 models.Base.metadata.create_all(bind=engine)
 
@@ -41,6 +44,14 @@ app = FastAPI(
     description="Multi-tenant Threat Intelligence & Monitoring Platform with JWT Authentication",
     version="2.0.0",
     lifespan=lifespan
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins for local dev. In production, change to your exact frontend URL.
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # --- Pydantic Data Models ---
@@ -511,3 +522,31 @@ async def get_alerts(
     ).order_by(models.AlertRecord.created_at.desc()).all()
     
     return {"org_id": current_user.org_id, "alerts": alerts}
+
+
+
+
+
+# --- Analyst Alerts ---
+@app.get("/api/alerts")
+async def get_alerts(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Fetches chronological security alerts for the frontend UI."""
+    alerts = db.query(models.AlertRecord).filter(
+        models.AlertRecord.org_id == current_user.org_id
+    ).order_by(models.AlertRecord.created_at.desc()).all()
+    
+    return {
+        "org_id": current_user.org_id, 
+        "alerts": [
+            {
+                "ioc_value": a.ioc_value,
+                "ioc_type": a.ioc_type,
+                "threat_score": a.threat_score,
+                "message": a.message,
+                "created_at": a.created_at
+            } for a in alerts
+        ]
+    }
