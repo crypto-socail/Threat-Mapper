@@ -26,12 +26,19 @@ from auth import (
     get_current_user,
     verify_tenant_access,
 )
-
 from fastapi.middleware.cors import CORSMiddleware
 
 
 # Build all tables in the database
 models.Base.metadata.create_all(bind=engine)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -45,7 +52,6 @@ app = FastAPI(
     version="2.0.0",
     lifespan=lifespan
 )
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allows all origins for local dev. In production, change to your exact frontend URL.
@@ -74,12 +80,11 @@ class TokenResponse(BaseModel):
     role: str
 
 class WatchlistCreate(BaseModel):
-    org_id: int
     ioc_value: str
     ioc_type: str
 
 class IOCRequest(BaseModel):
-    ioc_value: str
+    ioc: str  #changed because of frontend 
     ioc_type: str
 
 class OrganizationCreate(BaseModel):
@@ -269,7 +274,7 @@ async def lookup_ioc(
     }
 
 # --- Watchlist Endpoints ---
-@app.post("/api/watchlist")
+@app.post("/api/organizations/{org_id}/watchlist")
 async def add_to_watchlist(
     request: WatchlistCreate, 
     db: Session = Depends(get_db),
