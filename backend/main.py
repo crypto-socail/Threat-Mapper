@@ -26,19 +26,13 @@ from auth import (
     get_current_user,
     verify_tenant_access,
 )
+
 from fastapi.middleware.cors import CORSMiddleware
 
 
 # Build all tables in the database
 models.Base.metadata.create_all(bind=engine)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
