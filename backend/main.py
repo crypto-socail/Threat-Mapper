@@ -510,18 +510,6 @@ async def get_correlation(
         "distribution": type_distribution
     }
 
-# --- Analyst Alerts ---
-@app.get("/api/alerts")
-async def get_alerts(
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
-):
-    """Fetches chronological security alerts for the frontend UI."""
-    alerts = db.query(models.AlertRecord).filter(
-        models.AlertRecord.org_id == current_user.org_id
-    ).order_by(models.AlertRecord.created_at.desc()).all()
-    
-    return {"org_id": current_user.org_id, "alerts": alerts}
 
 
 
