@@ -1,17 +1,23 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, UniqueConstraint, Boolean
+from datetime import datetime, timezone
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
-from datetime import datetime
 from database import Base
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
 
 class Organization(Base):
     __tablename__ = "organizations"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=utc_now)
 
     siem_configs = relationship("SiemConfigRecord", back_populates="organization", cascade="all, delete-orphan")
     users = relationship("User", back_populates="organization", cascade="all, delete-orphan")
+
 
 class User(Base):
     __tablename__ = "users"
@@ -23,9 +29,10 @@ class User(Base):
     role = Column(String(50), default="analyst")
     org_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=utc_now)
 
     organization = relationship("Organization", back_populates="users")
+
 
 class SiemConfigRecord(Base):
     __tablename__ = "siem_configs"
@@ -34,10 +41,10 @@ class SiemConfigRecord(Base):
     org_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
     siem_type = Column(String(50), nullable=False)
     endpoint_url = Column(String(255), nullable=True)
-    auth_token = Column(String(255), nullable=False)
+    auth_token = Column(String(512), nullable=False)
     sync_mode = Column(String(20), default="push")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=utc_now)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 
     organization = relationship("Organization", back_populates="siem_configs")
 
@@ -45,36 +52,39 @@ class SiemConfigRecord(Base):
         UniqueConstraint("org_id", "siem_type", name="uq_org_siem_type"),
     )
 
+
 class IOCRecord(Base):
     __tablename__ = "ioc_records"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     ioc_value = Column(String(255), unique=True, index=True, nullable=False)
     ioc_type = Column(String(50), nullable=False)
     verdict = Column(String(50), nullable=False)
     confidence_score = Column(Float, nullable=False)
-    last_seen = Column(DateTime, default=datetime.utcnow)
+    source_breakdown = Column(Text, nullable=True)
+    last_seen = Column(DateTime(timezone=True), default=utc_now)
 
 
 class WatchlistRecord(Base):
     __tablename__ = "watchlist_records"
-    
+
     id = Column(Integer, primary_key=True, index=True)
-    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
+    org_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
     ioc_value = Column(String, index=True, nullable=False)
     ioc_type = Column(String, nullable=False)
-    added_at = Column(DateTime, default=datetime.utcnow)
-    last_checked = Column(DateTime, nullable=True)
+    added_at = Column(DateTime(timezone=True), default=utc_now)
+    last_checked = Column(DateTime(timezone=True), nullable=True)
     alert_on_change = Column(Boolean, default=True)
 
 
 class AlertRecord(Base):
     __tablename__ = "alert_records"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     org_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
     ioc_value = Column(String(255), nullable=False)
     ioc_type = Column(String(50), nullable=False)
     threat_score = Column(Float, nullable=False)
     message = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    acknowledged = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now)
